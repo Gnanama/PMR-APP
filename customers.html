@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customers — CRM</title>
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div id="layout"></div>
+    <main class="main-content">
+      <div class="page-header">
+        <h1>Customers</h1>
+        <button class="btn btn-primary" onclick="openModal()">+ New Customer</button>
+      </div>
+      <div id="alert" class="alert alert-success" hidden></div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Email</th>
+                <th>Address</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="customerTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="modal" class="modal-overlay hidden">
+    <div class="modal">
+      <h2 id="modalTitle">New Customer</h2>
+      <form id="customerForm">
+        <input type="hidden" id="customerId">
+        <div class="form-group">
+          <label for="name">Name *</label>
+          <input type="text" id="name" required>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="phone">Phone</label>
+            <input type="text" id="phone">
+          </div>
+          <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="address">Address</label>
+          <textarea id="address" rows="2"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="notes">Notes</label>
+          <textarea id="notes" rows="2"></textarea>
+        </div>
+        <div id="formAlert" class="alert alert-error" hidden></div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Save</button>
+          <button type="button" class="btn btn-outline" onclick="closeModal()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/layout.js"></script>
+  <script>
+    let customers = [];
+
+    function openModal(customer) {
+      document.getElementById('modal').classList.remove('hidden');
+      document.getElementById('formAlert').hidden = true;
+      if (customer) {
+        document.getElementById('modalTitle').textContent = 'Edit Customer';
+        document.getElementById('customerId').value = customer.id;
+        document.getElementById('name').value = customer.name;
+        document.getElementById('phone').value = customer.phone || '';
+        document.getElementById('email').value = customer.email || '';
+        document.getElementById('address').value = customer.address || '';
+        document.getElementById('notes').value = customer.notes || '';
+      } else {
+        document.getElementById('modalTitle').textContent = 'New Customer';
+        document.getElementById('customerForm').reset();
+        document.getElementById('customerId').value = '';
+      }
+    }
+
+    function closeModal() {
+      document.getElementById('modal').classList.add('hidden');
+    }
+
+    async function loadCustomers() {
+      customers = await API.getCustomers();
+      document.getElementById('customerTable').innerHTML = customers.map(c => `
+        <tr>
+          <td>${c.name}</td>
+          <td>${c.phone || '—'}</td>
+          <td>${c.email || '—'}</td>
+          <td>${c.address || '—'}</td>
+          <td>${formatDate(c.created_at)}</td>
+          <td><button class="btn btn-sm btn-outline" data-edit="${c.id}">Edit</button></td>
+        </tr>
+      `).join('') || '<tr><td colspan="6">No customers yet.</td></tr>';
+
+      document.querySelectorAll('[data-edit]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const c = customers.find(x => x.id === parseInt(btn.dataset.edit, 10));
+          if (c) openModal(c);
+        });
+      });
+    }
+
+    document.getElementById('customerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const alert = document.getElementById('formAlert');
+      hideAlert(alert);
+      const id = document.getElementById('customerId').value;
+      const data = {
+        name: document.getElementById('name').value,
+        phone: document.getElementById('phone').value,
+        email: document.getElementById('email').value,
+        address: document.getElementById('address').value,
+        notes: document.getElementById('notes').value,
+      };
+      try {
+        if (id) await API.updateCustomer(id, data);
+        else await API.createCustomer(data);
+        closeModal();
+        showAlert(document.getElementById('alert'), 'Customer saved.', 'success');
+        loadCustomers();
+      } catch (err) {
+        showAlert(alert, err.message);
+      }
+    });
+
+    initAdminPage('customers', loadCustomers);
+  </script>
+</body>
+</html>

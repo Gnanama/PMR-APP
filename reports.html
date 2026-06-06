@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Reports — CRM</title>
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div id="layout"></div>
+    <main class="main-content">
+      <div class="page-header">
+        <h1>My Reports</h1>
+        <div class="export-bar no-print">
+          <button class="btn btn-outline" onclick="window.print()">Print</button>
+        </div>
+      </div>
+
+      <div class="card no-print">
+        <div class="filter-bar">
+          <div class="form-group">
+            <label>Period</label>
+            <select id="period" onchange="loadReport()">
+              <option value="daily">Daily</option>
+              <option value="monthly">Monthly</option>
+              <option value="yearly">Yearly</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Date</label>
+            <input type="date" id="reportDate" onchange="loadReport()">
+          </div>
+          <button class="btn btn-primary" onclick="loadReport()">Generate</button>
+        </div>
+      </div>
+
+      <div class="card" id="reportContent">
+        <h2 id="reportTitle">Report</h2>
+        <div class="report-summary" id="reportSummary"></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Customer</th>
+                <th>Type</th>
+                <th>Title</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Completed</th>
+              </tr>
+            </thead>
+            <tbody id="reportTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/layout.js"></script>
+  <script>
+    async function loadReport() {
+      const period = document.getElementById('period').value;
+      const date = document.getElementById('reportDate').value;
+      const data = await API.getReportSummary(period, date);
+
+      document.getElementById('reportTitle').textContent = data.label;
+      document.getElementById('reportSummary').innerHTML = `
+        <div class="stat-card"><div class="label">Total</div><div class="value">${data.summary.total}</div></div>
+        <div class="stat-card"><div class="label">Inward</div><div class="value">${data.summary.inward}</div></div>
+        <div class="stat-card"><div class="label">Outward</div><div class="value">${data.summary.outward}</div></div>
+        <div class="stat-card"><div class="label">Pending</div><div class="value">${data.summary.pending}</div></div>
+        <div class="stat-card"><div class="label">Completed</div><div class="value">${data.summary.completed}</div></div>
+      `;
+
+      document.getElementById('reportTable').innerHTML = data.rows.map(r => `
+        <tr>
+          <td>${r.customer_name}</td>
+          <td>${typeBadge(r.type)}</td>
+          <td>${r.title}</td>
+          <td>${statusBadge(r.status)}</td>
+          <td>${formatDate(r.created_at)}</td>
+          <td>${formatDate(r.completed_at)}</td>
+        </tr>
+      `).join('') || '<tr><td colspan="6">No records for this period.</td></tr>';
+    }
+
+    initStaffPage('reports', () => {
+      document.getElementById('reportDate').value = todayISO();
+      loadReport();
+    });
+  </script>
+</body>
+</html>

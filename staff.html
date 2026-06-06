@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Staff Management — CRM</title>
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div id="layout"></div>
+    <main class="main-content">
+      <div class="page-header">
+        <h1>Staff Management</h1>
+        <button class="btn btn-primary no-print" onclick="openModal()">+ Create Staff</button>
+      </div>
+      <div id="alert" class="alert alert-success" hidden></div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>User ID</th>
+                <th>Full Name</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="staffTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="modal" class="modal-overlay hidden">
+    <div class="modal">
+      <h2 id="modalTitle">Create Staff</h2>
+      <form id="staffForm">
+        <input type="hidden" id="staffId">
+        <div class="form-group">
+          <label for="username">User ID</label>
+          <input type="text" id="username" required>
+        </div>
+        <div class="form-group">
+          <label for="full_name">Full Name</label>
+          <input type="text" id="full_name" required>
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password">
+          <small style="color:var(--muted)">Leave blank when editing to keep current password</small>
+        </div>
+        <div id="formAlert" class="alert alert-error" hidden></div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Save</button>
+          <button type="button" class="btn btn-outline" onclick="closeModal()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/layout.js"></script>
+  <script>
+    let staffList = [];
+
+    function openModal(staff) {
+      document.getElementById('modal').classList.remove('hidden');
+      document.getElementById('formAlert').hidden = true;
+      if (staff) {
+        document.getElementById('modalTitle').textContent = 'Edit Staff';
+        document.getElementById('staffId').value = staff.id;
+        document.getElementById('username').value = staff.username;
+        document.getElementById('username').disabled = true;
+        document.getElementById('full_name').value = staff.full_name;
+        document.getElementById('password').value = '';
+        document.getElementById('password').required = false;
+      } else {
+        document.getElementById('modalTitle').textContent = 'Create Staff';
+        document.getElementById('staffForm').reset();
+        document.getElementById('staffId').value = '';
+        document.getElementById('username').disabled = false;
+        document.getElementById('password').required = true;
+      }
+    }
+
+    function closeModal() {
+      document.getElementById('modal').classList.add('hidden');
+    }
+
+    async function loadStaff() {
+      staffList = await API.getUsers();
+      document.getElementById('staffTable').innerHTML = staffList.map(s => `
+        <tr>
+          <td>${s.username}</td>
+          <td>${s.full_name}</td>
+          <td>${s.active ? '<span class="badge badge-success">Active</span>' : '<span class="badge badge-warning">Inactive</span>'}</td>
+          <td>${formatDate(s.created_at)}</td>
+          <td class="actions-cell">
+            <button class="btn btn-sm btn-outline" data-edit="${s.id}">Edit</button>
+            ${s.active ? `<button class="btn btn-sm btn-danger" onclick="deactivate(${s.id})">Deactivate</button>` : `<button class="btn btn-sm btn-success" onclick="activate(${s.id})">Activate</button>`}
+          </td>
+        </tr>
+      `).join('') || '<tr><td colspan="5">No staff yet. Create one above.</td></tr>';
+
+      document.querySelectorAll('[data-edit]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const s = staffList.find(x => x.id === parseInt(btn.dataset.edit, 10));
+          if (s) openModal(s);
+        });
+      });
+    }
+
+    async function deactivate(id) {
+      if (!confirm('Deactivate this staff member?')) return;
+      await API.deactivateUser(id);
+      loadStaff();
+    }
+
+    async function activate(id) {
+      await API.updateUser(id, { active: true });
+      loadStaff();
+    }
+
+    document.getElementById('staffForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const alert = document.getElementById('formAlert');
+      hideAlert(alert);
+      const id = document.getElementById('staffId').value;
+      try {
+        if (id) {
+          const data = { full_name: document.getElementById('full_name').value };
+          const pw = document.getElementById('password').value;
+          if (pw) data.password = pw;
+          await API.updateUser(id, data);
+        } else {
+          await API.createUser({
+            username: document.getElementById('username').value,
+            full_name: document.getElementById('full_name').value,
+            password: document.getElementById('password').value,
+          });
+        }
+        closeModal();
+        const pageAlert = document.getElementById('alert');
+        showAlert(pageAlert, 'Staff saved successfully.', 'success');
+        loadStaff();
+      } catch (err) {
+        showAlert(alert, err.message);
+      }
+    });
+
+    initAdminPage('staff', loadStaff);
+  </script>
+</body>
+</html>

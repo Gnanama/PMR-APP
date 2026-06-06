@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inward Work — CRM</title>
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div id="layout"></div>
+    <main class="main-content">
+      <div class="page-header">
+        <h1>Inward Work</h1>
+        <button class="btn btn-primary" onclick="openModal()">+ New Inward Record</button>
+      </div>
+      <div id="alert" class="alert alert-success" hidden></div>
+      <div class="card">
+        <div class="filter-bar no-print">
+          <div class="form-group">
+            <label>Status</label>
+            <select id="filterStatus" onchange="loadWork()">
+              <option value="">All</option>
+              <option value="pending">Pending</option>
+              <option value="completed">Completed</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Customer</th>
+                <th>Title</th>
+                <th>Assigned To</th>
+                <th>Status</th>
+                <th>Due</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="workTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="modal" class="modal-overlay hidden">
+    <div class="modal">
+      <h2 id="modalTitle">New Inward Record</h2>
+      <form id="workForm">
+        <input type="hidden" id="workId">
+        <div class="form-group">
+          <label for="customer_id">Customer *</label>
+          <select id="customer_id" required></select>
+        </div>
+        <div class="form-group">
+          <label for="title">Title *</label>
+          <input type="text" id="title" required>
+        </div>
+        <div class="form-group">
+          <label for="description">Description</label>
+          <textarea id="description" rows="3"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="assigned_to">Assign to Staff</label>
+            <select id="assigned_to"><option value="">Unassigned</option></select>
+          </div>
+          <div class="form-group">
+            <label for="due_date">Due Date</label>
+            <input type="date" id="due_date">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="status">Status</label>
+          <select id="status">
+            <option value="pending">Pending</option>
+            <option value="completed">Completed</option>
+          </select>
+        </div>
+        <div id="formAlert" class="alert alert-error" hidden></div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Save</button>
+          <button type="button" class="btn btn-outline" onclick="closeModal()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/layout.js"></script>
+  <script src="/js/work-page.js"></script>
+  <script>
+    initWorkPage('inward', 'work-inward');
+  </script>
+</body>
+</html>

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Work — CRM</title>
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div id="layout"></div>
+    <main class="main-content">
+      <div class="page-header">
+        <h1>My Work</h1>
+      </div>
+      <div id="alert" class="alert alert-success" hidden></div>
+      <div class="card">
+        <div class="filter-bar no-print">
+          <div class="form-group">
+            <label>Status</label>
+            <select id="filterStatus" onchange="loadWork()">
+              <option value="">All</option>
+              <option value="pending">Pending</option>
+              <option value="completed">Completed</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Type</label>
+            <select id="filterType" onchange="loadWork()">
+              <option value="">All</option>
+              <option value="inward">Inward</option>
+              <option value="outward">Outward</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Customer</th>
+                <th>Type</th>
+                <th>Title</th>
+                <th>Status</th>
+                <th>Due</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="workTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="modal" class="modal-overlay hidden">
+    <div class="modal">
+      <h2>Complete Work</h2>
+      <form id="completeForm">
+        <input type="hidden" id="workId">
+        <p id="workSummary"></p>
+        <div class="form-group">
+          <label for="completion_notes">Completion Notes</label>
+          <textarea id="completion_notes" rows="3"></textarea>
+        </div>
+        <div id="formAlert" class="alert alert-error" hidden></div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-success">Mark Completed</button>
+          <button type="button" class="btn btn-outline" onclick="closeModal()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/layout.js"></script>
+  <script>
+    let workList = [];
+
+    function closeModal() {
+      document.getElementById('modal').classList.add('hidden');
+    }
+
+    function openCompleteModal(work) {
+      document.getElementById('modal').classList.remove('hidden');
+      document.getElementById('workId').value = work.id;
+      document.getElementById('workSummary').textContent = `${work.customer_name} — ${work.title}`;
+      document.getElementById('completion_notes').value = work.completion_notes || '';
+      document.getElementById('formAlert').hidden = true;
+    }
+
+    async function loadWork() {
+      workList = await API.getMyWork();
+      const statusFilter = document.getElementById('filterStatus').value;
+      const typeFilter = document.getElementById('filterType').value;
+
+      let filtered = workList;
+      if (statusFilter) filtered = filtered.filter(w => w.status === statusFilter);
+      if (typeFilter) filtered = filtered.filter(w => w.type === typeFilter);
+
+      document.getElementById('workTable').innerHTML = filtered.map(w => `
+        <tr>
+          <td>${w.customer_name}<br><small style="color:var(--muted)">${w.customer_phone || ''}</small></td>
+          <td>${typeBadge(w.type)}</td>
+          <td>${w.title}<br><small style="color:var(--muted)">${w.description || ''}</small></td>
+          <td>${statusBadge(w.status)}</td>
+          <td>${formatDate(w.due_date)}</td>
+          <td class="actions-cell">
+            ${w.status === 'pending'
+              ? `<button class="btn btn-sm btn-success" data-complete="${w.id}">Complete</button>`
+              : `<button class="btn btn-sm btn-outline" data-reopen="${w.id}">Reopen</button>`}
+          </td>
+        </tr>
+      `).join('') || '<tr><td colspan="6">No work assigned to you.</td></tr>';
+
+      document.querySelectorAll('[data-complete]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const w = workList.find(x => x.id === parseInt(btn.dataset.complete, 10));
+          if (w) openCompleteModal(w);
+        });
+      });
+
+      document.querySelectorAll('[data-reopen]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = parseInt(btn.dataset.reopen, 10);
+          await API.updateWorkStatus(id, { status: 'pending' });
+          showAlert(document.getElementById('alert'), 'Work reopened.', 'success');
+          loadWork();
+        });
+      });
+    }
+
+    document.getElementById('completeForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const alert = document.getElementById('formAlert');
+      hideAlert(alert);
+      try {
+        await API.updateWorkStatus(document.getElementById('workId').value, {
+          status: 'completed',
+          completion_notes: document.getElementById('completion_notes').value,
+        });
+        closeModal();
+        showAlert(document.getElementById('alert'), 'Work marked as completed.', 'success');
+        loadWork();
+      } catch (err) {
+        showAlert(alert, err.message);
+      }
+    });
+
+    initStaffPage('my-work', () => {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('status')) document.getElementById('filterStatus').value = params.get('status');
+      loadWork();
+    });
+  </script>
+</body>
+</html>

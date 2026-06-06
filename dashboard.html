@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Staff Dashboard — CRM</title>
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div id="layout"></div>
+    <main class="main-content">
+      <div class="page-header">
+        <h1>My Dashboard</h1>
+      </div>
+      <div class="stats-grid" id="statsGrid"></div>
+      <div class="card">
+        <h2>Quick Links</h2>
+        <div class="quick-links">
+          <a href="/staff/my-work.html" class="quick-link">View My Work</a>
+          <a href="/staff/my-work.html?status=pending" class="quick-link">Pending Tasks</a>
+          <a href="/staff/reports.html" class="quick-link">My Reports</a>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/layout.js"></script>
+  <script>
+    initStaffPage('dashboard', async () => {
+      const stats = await API.getStats();
+      document.getElementById('statsGrid').innerHTML = `
+        <div class="stat-card"><div class="label">Total Assigned</div><div class="value">${stats.total}</div></div>
+        <div class="stat-card"><div class="label">Pending</div><div class="value">${stats.pending}</div></div>
+        <div class="stat-card"><div class="label">Completed</div><div class="value">${stats.completed}</div></div>
+        <div class="stat-card"><div class="label">Inward</div><div class="value">${stats.inward}</div></div>
+        <div class="stat-card"><div class="label">Outward</div><div class="value">${stats.outward}</div></div>
+      `;
+    });
+  </script>
+</body>
+</html>
